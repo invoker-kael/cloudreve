@@ -154,6 +154,18 @@ func KioskLoginUser(c *gin.Context) (*ent.User, error) {
 		return nil, serializer.NewError(serializer.CodeNoPermissionErr, "Kiosk user must be an administrator", nil)
 	}
 
+	// Kiosk mode is intended for a single-user appliance. Keep the selected
+	// administrator group unlimited even on databases created before kiosk mode
+	// changed the default admin quota. Cloudreve treats max_storage <= 0 as
+	// unlimited when reserving upload capacity.
+	if group.MaxStorage > 0 {
+		updatedGroup, err := group.Update().SetMaxStorage(0).Save(c)
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeDBError, "Failed to remove kiosk storage quota", err)
+		}
+		u.SetGroup(updatedGroup)
+	}
+
 	return u, nil
 }
 
