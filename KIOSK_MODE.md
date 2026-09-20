@@ -28,6 +28,14 @@ The community backend does not impose a numeric limit on how many supported stor
 
 The Pro-only `load_balance` provider is deliberately not force-enabled here: this community backend does not contain the complete implementation/wizard needed to make that provider functional. Existing community providers such as Local, Remote, S3, OneDrive, OSS, COS, Qiniu, Upyun, OBS and KS3 continue to use their normal creation APIs without an added count restriction.
 
+## Storage quota
+
+The default administrator group uses `max_storage = 0`, which Cloudreve treats as unlimited capacity.
+
+For existing databases created with the upstream 1 TB administrator quota, the first successful kiosk session automatically updates the selected administrator group to `max_storage = 0`. This also removes the effective upload-capacity limit for WebDAV accounts owned by that kiosk administrator.
+
+WebDAV authentication remains enabled: clients still use the account email and generated WebDAV application password. Kiosk mode does not expose an unauthenticated WebDAV endpoint.
+
 ## Security warning
 
 Anyone who can reach this web UI can obtain administrator access by design. Only expose this fork on a trusted LAN/VPN or place it behind an authentication-capable reverse proxy. Do not publish the kiosk endpoint directly to an untrusted network.

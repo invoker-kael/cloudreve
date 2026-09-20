@@ -160,7 +160,7 @@ func migrateAdminGroup(l logging.Logger, client *ent.Client, ctx context.Context
 	if _, err := client.Group.Create().
 		SetName("Admin").
 		SetStoragePoliciesID(1).
-		SetMaxStorage(1 * constants.TB). // 1 TB default storage
+		SetMaxStorage(0). // Unlimited storage for the kiosk-oriented admin group
 		SetPermissions(permissions).
 		SetSettings(&types.GroupSetting{
 			SourceBatchSize:  1000,
