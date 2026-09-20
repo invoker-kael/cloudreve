@@ -3,11 +3,14 @@ package user
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/email"
@@ -118,6 +121,40 @@ func (service *UserResetEmailService) Reset(c *gin.Context) error {
 	}
 
 	return nil
+}
+
+const KioskUserIDEnv = "CR_KIOSK_USER_ID"
+
+// KioskLoginUser resolves the real administrator account used by the
+// passwordless single-user web UI. It deliberately reuses the normal token
+// issuance path instead of bypassing authorization middleware, so all file,
+// workflow and admin APIs keep their existing permission checks.
+func KioskLoginUser(c *gin.Context) (*ent.User, error) {
+	uid := 1
+	if rawUID := os.Getenv(KioskUserIDEnv); rawUID != "" {
+		parsedUID, err := strconv.Atoi(rawUID)
+		if err != nil || parsedUID <= 0 {
+			return nil, serializer.NewError(serializer.CodeParamErr, "Invalid "+KioskUserIDEnv, err)
+		}
+		uid = parsedUID
+	}
+
+	dep := dependency.FromContext(c)
+	ctx := context.WithValue(c, inventory.LoadUserGroup{}, true)
+	u, err := dep.UserClient().GetActiveByID(ctx, uid)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeUserNotFound, "Kiosk user not found", err)
+	}
+
+	group, err := u.Edges.GroupOrErr()
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to load kiosk user group", err)
+	}
+	if !group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		return nil, serializer.NewError(serializer.CodeNoPermissionErr, "Kiosk user must be an administrator", nil)
+	}
+
+	return u, nil
 }
 
 // Login 用户登录函数

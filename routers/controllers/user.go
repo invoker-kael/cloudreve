@@ -72,6 +72,20 @@ func UserDeletePasskey(c *gin.Context) {
 	c.JSON(200, serializer.Response{})
 }
 
+// UserKioskLogin issues a regular login token for the configured kiosk user.
+// This endpoint is intentionally passwordless for this fork.
+func UserKioskLogin(c *gin.Context) {
+	expectedUser, err := user.KioskLoginUser(c)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	util.WithValue(c, inventory.UserCtx{}, expectedUser)
+	UserIssueToken(c)
+}
+
 // UserLoginValidation validates user login request
 func UserLoginValidation(c *gin.Context) {
 	service := ParametersFromContext[*user.UserLoginService](c, user.LoginParameterCtx{})
