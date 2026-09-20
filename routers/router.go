@@ -283,6 +283,9 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 		// User authentication
 		session := v4.Group("session")
 		{
+			// Passwordless single-user entrypoint used by the kiosk frontend.
+			session.GET("kiosk", controllers.UserKioskLogin)
+
 			token := session.Group("token")
 			// Token based authentication
 			{
